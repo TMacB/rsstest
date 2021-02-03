@@ -27,8 +27,9 @@
         link.href = item.url;
         link.innerText = item.title;
         row.append(link);
-        let d = new Date(item.date_published);
-        row.innerHTML += " " + toDate.format(d);
+        // let d = new Date(item.date_published);
+        // row.innerHTML += " " + toDate.format(d);
+        row.innerHTML = item.content_text
         listEls.push(row);
       }
       let el = document.getElementById("contents");
