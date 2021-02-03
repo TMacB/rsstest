@@ -1,4 +1,4 @@
-module github.com/carlmjohnson/netlify-function-cache-test
+module github.com/TMacB/rsstest
 
 go 1.13
 
