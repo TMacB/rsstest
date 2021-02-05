@@ -42,7 +42,7 @@ type Rss struct {
 
 type WarningsJSON struct {
 	// warnings string `json:"warning"`
-	Warnings []Item
+	Warnings []Item `json:"warnings"`
 }
 type Item struct {
 	Level  string `json:"level"`
@@ -124,18 +124,16 @@ func metOffice(w http.ResponseWriter, r *http.Request) {
 		dateRange := reDate.FindStringSubmatch(r.Description)
 		// fmt.Println(dateRange[1], dateRange[2])
 
-		// start, err := time.Parse(layout, dateRange[1]+" "+fmt.Sprint(now.Year()))
-		// if err != nil {
-		// 	fmt.Println(err)
-		// }
+		start, err := time.Parse(layout, dateRange[1]+" "+fmt.Sprint(now.Year()))
+		if err != nil {
+			fmt.Println(err)
+		}
 
 		end, err := time.Parse(layout, dateRange[2]+" "+fmt.Sprint(now.Year()))
 		if err != nil {
 			fmt.Println(err)
 		}
 		// fmt.Println(start, end)
-
-		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 
 		for d := start; d.After(end) == false; d = d.AddDate(0, 0, 1) {
 			// fmt.Println(d.Format("2006-01-02"))

@@ -28,89 +28,115 @@
     const now = new Date();
 
     (async () => {
-      let data = await fetch("/api/mo").then(rsp => rsp.json());
-      // let data = await fetch("../feed.json").then(rsp => rsp.json());
+      // let data = await fetch("/api/mo").then(rsp => rsp.json());
+      let data = await fetch("../feed.json").then(rsp => rsp.json());
 
-      // set up warnings object
-      // ----------------------
-      let warnings = {};
+      console.log(data.warnings);
+
+
+      let warnings = data.warnings;
 
       let listEls = [];
-      for (let item of data.items) {
-
-        let region = item.id.match(/&region=([^\"]+)/i)[1];
-
-        if (ignore.includes(region)) {
-          console.log('ignoring: ' + region);
-        }
-        else {
-          // parse dates
-          // -----------
-          let dates = {};
-
-          dates.range = item.content_text.match(/valid from (.+) to (.+)$/i);
-          dates.from = {};
-          dates.from.match = dates.range[1];
-          dates.to = {};
-          dates.to.match = dates.range[2];
-
-          dates.from.split = dates.from.match.split(" ");
-          dates.from.date = new Date(dates.from.split[3] + " " + dates.from.split[2] + " " + now.getFullYear());
-          dates.from.date.setHours(dates.from.split[0].substring(0, 2));
-          dates.from.epoc = Date.parse(dates.from.date);
-
-          dates.to.split = dates.to.match.split(" ");
-          dates.to.date = new Date(dates.to.split[3] + " " + dates.to.split[2] + " " + now.getFullYear());
-          dates.to.date.setHours(dates.to.split[0].substring(0, 2));
-          dates.from.epoc = Date.parse(dates.to.date);
-
-          // console.log(dates);
-
-          var loop = new Date(dates.from.date);
-          loop.setHours(0);
-
-          while (loop <= dates.to.date) {
-
-            let epoc = Date.parse(loop);
-
-            warnings[epoc] = warnings[epoc] || [];
-
-            let level = item.title.replace(/ .*/,'');
-
-            let warning = {
-              level: level,
-              date: loop,
-              region: region,
-              id: item.id,
-              url: item.url,
-              title: item.title,
-              text: item.text
-            }
-
-            warnings[epoc].push(warning);
-
-            let row = document.createElement("li");
-            let link = document.createElement("a");
-            link.href = item.url;
-            link.innerText = item.title;
-            row.append(link);
-            // let d = new Date(item.date_published);
-            // row.innerHTML += " " + toDate.format(d);
-            row.innerHTML += " [" + toDate.format(dates.from.date) + " -> " + toDate.format(dates.to.date) + "] " + item.content_text
-            listEls.push(row);
-
-            var newDate = loop.setDate(loop.getDate() + 1);
-            loop = new Date(newDate);
-          }
 
 
-        }
+      for (let w = 0; w < warnings.length; w++) {
+        console.log(warnings[w]);
+        let item = warnings[w];
+
+        let row = document.createElement("li");
+        let link = document.createElement("a");
+        link.href = item.url;
+        link.innerText = item.title;
+        row.append(link);
+        // let d = new Date(item.date_published);
+        row.innerHTML += " " + item.date;
+        row.innerHTML += " <img src='img/" + item.level + "Warning.svg'/>";
+        
+        // row.innerHTML += " [" + toDate.format(dates.from.date) + " -> " + toDate.format(dates.to.date) + "] " + item.content_text
+        listEls.push(row);
 
       }
+
+      // // set up warnings object
+      // // ----------------------
+      // let warnings = {};
+
+      // let listEls = [];
+      // for (let item of data.items) {
+
+      //   let region = item.id.match(/&region=([^\"]+)/i)[1];
+
+      //   if (ignore.includes(region)) {
+      //     console.log('ignoring: ' + region);
+      //   }
+      //   else {
+      //     // parse dates
+      //     // -----------
+      //     let dates = {};
+
+      //     dates.range = item.content_text.match(/valid from (.+) to (.+)$/i);
+      //     dates.from = {};
+      //     dates.from.match = dates.range[1];
+      //     dates.to = {};
+      //     dates.to.match = dates.range[2];
+
+      //     dates.from.split = dates.from.match.split(" ");
+      //     dates.from.date = new Date(dates.from.split[3] + " " + dates.from.split[2] + " " + now.getFullYear());
+      //     dates.from.date.setHours(dates.from.split[0].substring(0, 2));
+      //     dates.from.epoc = Date.parse(dates.from.date);
+
+      //     dates.to.split = dates.to.match.split(" ");
+      //     dates.to.date = new Date(dates.to.split[3] + " " + dates.to.split[2] + " " + now.getFullYear());
+      //     dates.to.date.setHours(dates.to.split[0].substring(0, 2));
+      //     dates.from.epoc = Date.parse(dates.to.date);
+
+      //     // console.log(dates);
+
+      //     var loop = new Date(dates.from.date);
+      //     loop.setHours(0);
+
+      //     while (loop <= dates.to.date) {
+
+      //       let epoc = Date.parse(loop);
+
+      //       warnings[epoc] = warnings[epoc] || [];
+
+      //       let level = item.title.replace(/ .*/,'');
+
+      //       let warning = {
+      //         level: level,
+      //         date: loop,
+      //         region: region,
+      //         id: item.id,
+      //         url: item.url,
+      //         title: item.title,
+      //         text: item.text
+      //       }
+
+      //       warnings[epoc].push(warning);
+
+      //       let row = document.createElement("li");
+      //       let link = document.createElement("a");
+      //       link.href = item.url;
+      //       link.innerText = item.title;
+      //       row.append(link);
+      //       // let d = new Date(item.date_published);
+      //       // row.innerHTML += " " + toDate.format(d);
+      //       row.innerHTML += " [" + toDate.format(dates.from.date) + " -> " + toDate.format(dates.to.date) + "] " + item.content_text
+      //       listEls.push(row);
+
+      //       var newDate = loop.setDate(loop.getDate() + 1);
+      //       loop = new Date(newDate);
+      //     }
+
+
+      //   }
+
+      // }
       let el = document.getElementById("contents");
       el.append(...listEls);
 
-      console.dir(warnings);
+      // console.dir(warnings);
     })();
   </script>
 </body>
