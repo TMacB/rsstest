@@ -16,7 +16,7 @@ import (
 	"github.com/carlmjohnson/feed2json"
 )
 
-type Rss struct {
+type MetOffice struct {
 	// XMLName xml.Name `xml:"rss"`
 	// Text    string   `xml:",chardata"`
 	// Version string   `xml:"version,attr"`
@@ -53,6 +53,39 @@ type Item struct {
 	Text   string `json:"text"`
 }
 
+type TrafficScotlandCI struct {
+	XMLName xml.Name `xml:"rss"`
+	Text    string   `xml:",chardata"`
+	Version string   `xml:"version,attr"`
+	Georss  string   `xml:"georss,attr"`
+	Gml     string   `xml:"gml,attr"`
+	Channel struct {
+		Text           string `xml:",chardata"`
+		Title          string `xml:"title"`
+		Description    string `xml:"description"`
+		Link           string `xml:"link"`
+		Language       string `xml:"language"`
+		Copyright      string `xml:"copyright"`
+		ManagingEditor string `xml:"managingEditor"`
+		WebMaster      string `xml:"webMaster"`
+		LastBuildDate  string `xml:"lastBuildDate"`
+		Docs           string `xml:"docs"`
+		Rating         string `xml:"rating"`
+		Generator      string `xml:"generator"`
+		Ttl            string `xml:"ttl"`
+		Item           []struct {
+			Text        string `xml:",chardata"`
+			Title       string `xml:"title"`
+			Description string `xml:"description"`
+			Link        string `xml:"link"`
+			Point       string `xml:"point"`
+			Author      string `xml:"author"`
+			Comments    string `xml:"comments"`
+			PubDate     string `xml:"pubDate"`
+		} `xml:"item"`
+	} `xml:"channel"`
+}
+
 func main() {
 	port := flag.Int("port", -1, "specify a port to use http rather than AWS Lambda")
 	flag.Parse()
@@ -66,6 +99,7 @@ func main() {
 	}
 
 	http.HandleFunc("/api/mo", metOffice)
+	http.HandleFunc("/api/ts", trafficScotland)
 
 	http.Handle("/api/feed", feed2json.Handler(
 		feed2json.StaticURLInjector("http://www.metoffice.gov.uk/public/data/PWSCache/WarningsRSS/Region/UK"),
@@ -74,8 +108,42 @@ func main() {
 
 }
 
+func trafficScotland(w http.ResponseWriter, r *http.Request) {
+	resp, err := http.Get("https://trafficscotland.org/rss/feeds/currentincidents.aspx")
+	if err != nil {
+		log.Fatalf("GET error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Fatalf("Status error: %v", resp.StatusCode)
+	}
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Read body: %v", err)
+	}
+
+	var result TrafficScotlandCI
+	xml.Unmarshal(data, &result)
+	if nil != err {
+		log.Fatalf("Error unmarshalling from XML: %v", err)
+	}
+
+	// warnings := []*item{}
+	// var incidents TrafficScotlandCI
+
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(result); err != nil {
+		panic(err)
+	}
+
+}
+
 func metOffice(w http.ResponseWriter, r *http.Request) {
-	// io.WriteString(w, "Hello world!<br/><br/>")
 	resp, err := http.Get("http://www.metoffice.gov.uk/public/data/PWSCache/WarningsRSS/Region/UK")
 	if err != nil {
 		log.Fatalf("GET error: %v", err)
@@ -91,13 +159,12 @@ func metOffice(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("Read body: %v", err)
 	}
 
-	var result Rss
+	var result MetOffice
 	xml.Unmarshal(data, &result)
 	if nil != err {
 		log.Fatalf("Error unmarshalling from XML: %v", err)
 	}
 
-	// warnings := []*item{}
 	var warnings WarningsJSON
 
 	reRegion, _ := regexp.Compile("region=(.+)$")
@@ -157,6 +224,7 @@ func metOffice(w http.ResponseWriter, r *http.Request) {
 	// fmt.Println(warnings)
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	enableCors(&w)
 	w.WriteHeader(http.StatusOK)
 	encoder := json.NewEncoder(w)
 	encoder.SetEscapeHTML(false)
@@ -170,4 +238,8 @@ func cacheControlMiddleware(h http.Handler) http.Handler {
 		w.Header().Set("Cache-Control", "public, max-age=300")
 		h.ServeHTTP(w, r)
 	})
+}
+
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 }

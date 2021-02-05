@@ -26,35 +26,39 @@
     const ignore = ["Wales", "Northern Ireland", "North West England", "North East England", "Yorkshire & Humber", "West Midlands", "East Midlands", "East of England", "South West England", "London & South East England"];
 
     const now = new Date();
+    now.setHours(0);
+    now.setMinutes(0);
+    now.setSeconds(-1);
 
     (async () => {
-      let data = await fetch("/api/mo").then(rsp => rsp.json());
+      // let data = await fetch("/api/mo").then(rsp => rsp.json());
       // let data = await fetch("../feed.json").then(rsp => rsp.json());
+      let data = await fetch("https://unruffled-pasteur-6641e3.netlify.app/api/mo").then(rsp => rsp.json());
 
-      console.log(data.warnings);
-
+      // console.log(data.warnings);
 
       let warnings = data.warnings;
 
       let listEls = [];
 
-
       for (let w = 0; w < warnings.length; w++) {
         console.log(warnings[w]);
         let item = warnings[w];
 
-        let row = document.createElement("li");
-        let link = document.createElement("a");
-        link.href = item.url;
-        link.innerText = item.title;
-        row.append(link);
-        // let d = new Date(item.date_published);
-        row.innerHTML += " " + item.date;
-        row.innerHTML += " <img src='img/" + item.level + "Warning.svg'/>";
-        
-        // row.innerHTML += " [" + toDate.format(dates.from.date) + " -> " + toDate.format(dates.to.date) + "] " + item.content_text
-        listEls.push(row);
+        console.log(new Date(item.date), now)
+        if (new Date(item.date) >= now) {
+          let row = document.createElement("li");
+          let link = document.createElement("a");
+          link.href = item.url;
+          link.innerText = item.title;
+          row.append(link);
+          // let d = new Date(item.date_published);
+          // row.innerHTML += " " + item.date + row.innerHTML;
+          row.innerHTML = " <img src='img/" + item.level + "Warning.svg'/> " + item.date + " " + row.innerHTML;
 
+          // row.innerHTML += " [" + toDate.format(dates.from.date) + " -> " + toDate.format(dates.to.date) + "] " + item.content_text
+          listEls.push(row);
+        }
       }
 
       // // set up warnings object
