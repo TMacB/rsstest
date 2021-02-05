@@ -65,7 +65,7 @@ func main() {
 
 	}
 
-	http.HandleFunc("/mo", metOffice)
+	http.HandleFunc("/api/mo", metOffice)
 
 	http.Handle("/api/feed", feed2json.Handler(
 		feed2json.StaticURLInjector("http://www.metoffice.gov.uk/public/data/PWSCache/WarningsRSS/Region/UK"),
@@ -140,11 +140,8 @@ func metOffice(w http.ResponseWriter, r *http.Request) {
 		for d := start; d.After(end) == false; d = d.AddDate(0, 0, 1) {
 			// fmt.Println(d.Format("2006-01-02"))
 
-			// fmt.Println(time.Parse())
-
-			// populate Item
-			// -------------
-			// var i item
+			// populate warning(s)
+			// -------------------
 
 			level := strings.Fields(r.Title)[0]
 
