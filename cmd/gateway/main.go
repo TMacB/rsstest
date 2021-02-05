@@ -14,6 +14,7 @@ import (
 
 	"github.com/apex/gateway"
 	"github.com/carlmjohnson/feed2json"
+	"golang.org/x/net/html/charset"
 )
 
 type MetOffice struct {
@@ -55,12 +56,12 @@ type Item struct {
 
 type TrafficScotlandCI struct {
 	XMLName xml.Name `xml:"rss"`
-	Text    string   `xml:",chardata"`
-	Version string   `xml:"version,attr"`
-	Georss  string   `xml:"georss,attr"`
-	Gml     string   `xml:"gml,attr"`
+	// Text    string   `xml:",chardata"`
+	// Version string   `xml:"version,attr"`
+	// Georss  string   `xml:"georss,attr"`
+	// Gml     string   `xml:"gml,attr"`
 	Channel struct {
-		Text           string `xml:",chardata"`
+		// Text           string `xml:",chardata"`
 		Title          string `xml:"title"`
 		Description    string `xml:"description"`
 		Link           string `xml:"link"`
@@ -74,7 +75,7 @@ type TrafficScotlandCI struct {
 		Generator      string `xml:"generator"`
 		Ttl            string `xml:"ttl"`
 		Item           []struct {
-			Text        string `xml:",chardata"`
+			// Text        string `xml:",chardata"`
 			Title       string `xml:"title"`
 			Description string `xml:"description"`
 			Link        string `xml:"link"`
@@ -86,6 +87,19 @@ type TrafficScotlandCI struct {
 	} `xml:"channel"`
 }
 
+type IncidentsJSON struct {
+	// warnings string `json:"warning"`
+	Incidents []Incident `json:"incidents"`
+}
+type Incident struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Link        string `json:"link"`
+	Point       string `json:"point"`
+	Comments    string `json:"comments"`
+	Date        string `json:"date"`
+}
+
 func main() {
 	port := flag.Int("port", -1, "specify a port to use http rather than AWS Lambda")
 	flag.Parse()
@@ -95,7 +109,6 @@ func main() {
 		portStr = fmt.Sprintf(":%d", *port)
 		listener = http.ListenAndServe
 		http.Handle("/", http.FileServer(http.Dir("./public")))
-
 	}
 
 	http.HandleFunc("/api/mo", metOffice)
@@ -114,30 +127,46 @@ func trafficScotland(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("GET error: %v", err)
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
 		log.Fatalf("Status error: %v", resp.StatusCode)
 	}
 
-	data, err := ioutil.ReadAll(resp.Body)
+	var xmlIncidents TrafficScotlandCI
+	decoder := xml.NewDecoder(resp.Body)
+	decoder.CharsetReader = charset.NewReaderLabel
+	err = decoder.Decode(&xmlIncidents)
 	if err != nil {
-		log.Fatalf("Read body: %v", err)
+		fmt.Println(err)
 	}
 
-	var result TrafficScotlandCI
-	xml.Unmarshal(data, &result)
-	if nil != err {
-		log.Fatalf("Error unmarshalling from XML: %v", err)
-	}
+	var incidents IncidentsJSON
 
-	// warnings := []*item{}
-	// var incidents TrafficScotlandCI
+	// reRegion, _ := regexp.Compile("region=(.+)$")
+	// ignore := "Wales|Northern Ireland|North West England|North East England|Yorkshire & Humber|West Midlands|East Midlands|East of England|South West England|London & South East England"
+
+	// reDate, _ := regexp.Compile("valid from (.+) to (.+)$")
+	// now := time.Now()
+	// layout := "1504 Mon 02 Jan 2006"
+
+	for k, r := range xmlIncidents.Channel.Item {
+		// fmt.Printf("%v -> %v\n", k, r)
+
+		incidents.Incidents = append(incidents.Incidents, Incident{
+			Title:       r.Title,
+			Description: r.Description,
+			Link:        r.Link,
+			Point:       r.Point,
+			Date:        r.PubDate, //.Format("2006-01-02"),
+		})
+	}
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	enableCors(&w)
 	w.WriteHeader(http.StatusOK)
+
 	encoder := json.NewEncoder(w)
 	encoder.SetEscapeHTML(false)
-	if err := encoder.Encode(result); err != nil {
+	if err := encoder.Encode(incidents); err != nil {
 		panic(err)
 	}
 
@@ -226,6 +255,7 @@ func metOffice(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	enableCors(&w)
 	w.WriteHeader(http.StatusOK)
+
 	encoder := json.NewEncoder(w)
 	encoder.SetEscapeHTML(false)
 	if err := encoder.Encode(warnings); err != nil {
