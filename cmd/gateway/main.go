@@ -148,7 +148,7 @@ func trafficScotland(w http.ResponseWriter, r *http.Request) {
 	// now := time.Now()
 	// layout := "1504 Mon 02 Jan 2006"
 
-	for k, r := range xmlIncidents.Channel.Item {
+	for _, r := range xmlIncidents.Channel.Item {
 		// fmt.Printf("%v -> %v\n", k, r)
 
 		incidents.Incidents = append(incidents.Incidents, Incident{
