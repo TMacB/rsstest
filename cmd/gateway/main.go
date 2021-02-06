@@ -47,11 +47,12 @@ type WarningsJSON struct {
 }
 type Item struct {
 	Level  string `json:"level"`
-	Date   string `json:"date"`
 	Region string `json:"region"`
 	URL    string `json:"url"`
 	Title  string `json:"title"`
 	Text   string `json:"text"`
+	Start  string `json:"start"`
+	End    string `json:"end"`
 }
 
 type TrafficScotlandCI struct {
@@ -231,23 +232,24 @@ func metOffice(w http.ResponseWriter, r *http.Request) {
 		}
 		// fmt.Println(start, end)
 
-		for d := start; d.After(end) == false; d = d.AddDate(0, 0, 1) {
-			// fmt.Println(d.Format("2006-01-02"))
+		// for d := start; d.After(end) == false; d = d.AddDate(0, 0, 1) {
+		// fmt.Println(d.Format("2006-01-02"))
 
-			// populate warning(s)
-			// -------------------
+		// populate warning(s)
+		// -------------------
 
-			level := strings.Fields(r.Title)[0]
+		level := strings.Fields(r.Title)[0]
 
-			warnings.Warnings = append(warnings.Warnings, Item{
-				Level:  level,
-				Region: region,
-				URL:    r.GUID,
-				Title:  r.Title,
-				Text:   r.Description,
-				Date:   d.Format("2006-01-02"),
-			})
-		}
+		warnings.Warnings = append(warnings.Warnings, Item{
+			Level:  level,
+			Region: region,
+			URL:    r.GUID,
+			Title:  r.Title,
+			Text:   r.Description,
+			Start:  start.Format("2006-01-02 15:04"),
+			End:    end.Format("2006-01-02 15:04"),
+		})
+		// }
 	}
 
 	// fmt.Println(warnings)
