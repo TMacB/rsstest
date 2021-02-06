@@ -72,8 +72,8 @@
         <!-- <i class='fa fa-forward'></i> -->
         <i class='fa fa-undo' title='reset'></i>
         <div style="float: right; padding-right: 5px">
-          <img class="mo" src="img/yellowWarning.svg" height="14px" title="show|hide Met Office Warnings" />
-          <img class="car" src="icon/car-15.png" title="show|hide Traffic Scotland Incidents" />
+          <img class="metoffice" src="img/yellowWarning.svg" height="14px" title="show|hide Met Office Warnings" />
+          <img class="incidents" src="icon/car-15.png" title="show|hide Traffic Scotland Incidents" />
           <img class="castle" src="icon/castle-15.svg" title="show|hide castles" />
           <img class="distillery" src="icon/distillery-15.svg" title="show|hide distilleries" />
         </div>
@@ -123,6 +123,8 @@
     // -- --------------------------------------------------------------
     map.on("load", function () {
       let features = [];
+      let tsIncidentsSummary = "";     // Traffic Scotland Incident Summary
+      let moWarningsSummary = "";      // Met Office Warnings Summary
 
       // Add geolocate control to the map.
       map.addControl(
@@ -333,11 +335,11 @@
       $.get(`https://unruffled-pasteur-6641e3.netlify.app/api/ts`, function (data) {
 
         let incidents = [];
-        let summary = "";
+        tsIncidentsSummary = `<ul>`;
 
         $.each(data.incidents, function (i, c) {
-
           try {
+            tsIncidentsSummary = tsIncidentsSummary + `<li><a href="${c.link}">${c.description}</a></li>`;
 
             let latlon = c.point.split(" ");
 
@@ -358,6 +360,8 @@
           }
         });
 
+        tsIncidentsSummary = tsIncidentsSummary + `</ul>`;
+
 
         map.addLayer({
           id: "incidents",
@@ -367,7 +371,7 @@
             data: {
               type: "FeatureCollection",
               features: incidents,
-              summary: summary
+              summary: tsIncidentsSummary
             },
           },
           layout: {
@@ -387,6 +391,81 @@
             "text-halo-blur": 2,
           },
         });
+
+      });
+
+
+      // -- --------------------------------------------------------------
+      // --  M E T   O F F I C E
+      // -- --------------------------------------------------------------
+
+      // map.loadImage('icon/car-15.png', function (error, image) {
+      //   if (error) throw error;
+      //   // add image to the active style and make it SDF-enabled
+      //   map.addImage('car-icon', image, { sdf: true });
+      // });
+
+      $.get(`https://unruffled-pasteur-6641e3.netlify.app/api/mo`, function (data) {
+
+        let warnings = [];
+        moWarningsSummary = `<ul>`;
+
+        $.each(data.warnings, function (i, c) {
+          try {
+
+            let title = c.title.replace(/[^ ]+ warning of (.+)$/, "$1")
+            moWarningsSummary = moWarningsSummary + `<li><img src="img/${c.level}Warning.svg" style="height: 14px"/>${moment(c.start).format('ddd DD MMM hh:mm')} -> ${moment(c.end).format('ddd DD MMM hh:mm')} <a href="${c.url}">${title}</a></li>`;
+
+            // let latlon = c.point.split(" ");
+
+            // incidents.push({
+            //   type: "Feature",
+            //   geometry: {
+            //     type: "Point",
+            //     coordinates: [latlon[1], latlon[0]],
+            //   },
+            //   properties: {
+            //     icon: 'car-icon',
+            //     title: c.title,
+            //     description: c.description + `<br/><span style="font-size: 0.75em;"">Published: ${c.date}</span>`
+            //   },
+            // });
+          } catch (e) {
+            console.error(e);
+          }
+        });
+
+        moWarningsSummary = moWarningsSummary + `</ul>`;
+
+
+        // map.addLayer({
+        //   id: "incidents",
+        //   type: "symbol",
+        //   source: {
+        //     type: "geojson",
+        //     data: {
+        //       type: "FeatureCollection",
+        //       features: incidents,
+        //       summary: tsIncidentsSummary
+        //     },
+        //   },
+        //   layout: {
+        //     "icon-image": "car-icon",
+        //     "icon-size": 1.5,
+        //     "text-field": "{title}",
+        //     "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+        //     "text-offset": [1.5, 0],
+        //     "text-anchor": "left",
+        //     "text-size": 11,
+        //   },
+        //   paint: {
+        //     "icon-color": "#CC0000",
+        //     "text-color": "#CC0000",
+        //     "text-halo-color": "#eee",
+        //     "text-halo-width": 5,
+        //     "text-halo-blur": 2,
+        //   },
+        // });
 
       });
 
@@ -443,13 +522,26 @@
         reset();
       });
 
+      // update info box
+      $(".incidents").click(function () {
+        title.innerHTML = "Traffic Incidents";
+        description.innerHTML = tsIncidentsSummary;
+      });
+
+      // update info box
+      $(".metoffice").click(function () {
+        title.innerHTML = "Met Office Warnings";
+        description.innerHTML = moWarningsSummary;
+      });
+
+
       // -- --------------------------------------------------------------
       // --  E V E N T S 
       // -- --------------------------------------------------------------
 
       let layers = ["poi", "distillery", "incidents"]
 
-      for (let l=0; l < layers.length; l++) {
+      for (let l = 0; l < layers.length; l++) {
 
         let layer = layers[l];
 
@@ -477,170 +569,8 @@
 
 
     // -- --------------------------------------------------------------
-    // --  D I R E C T I O N S
+    // --  T O G G L E   L A Y E R S
     // -- --------------------------------------------------------------
-    function getDirections(routes, day) {
-
-      let e = routes[day].coords.join(';')
-
-      // https://www.mapbox.com/api-documentation/#directions
-      let url = `https://api.mapbox.com/directions/v5/mapbox/driving/${e}?geometries=geojson&steps=false&overview=full&access_token=${mapboxgl.accessToken}`;
-      let req = new XMLHttpRequest();
-      req.responseType = 'json';
-      req.open('GET', url, true);
-      req.onload = function () {
-        let jsonResponse = req.response;
-        let coords = jsonResponse.routes[0].geometry;
-        let km = jsonResponse.routes[0].distance * 0.001; // convert to km
-        let miles = km * 0.621371;
-        let seconds = jsonResponse.routes[0].duration;
-        let duration = moment.duration(seconds, 'seconds');
-
-        routes[day].distance = {}
-        routes[day].distance.miles = parseInt(miles, 10)
-        routes[day].distance.km = parseInt(km, 10)
-
-        routes[day].duration = duration._data.hours + "hrs " + duration._data.minutes + "m";
-        routes[day].logistics = routes[day].distance.miles + 'm | ' + routes[day].distance.km + 'km  |  ' + routes[day].duration;
-
-        // add the route to the map
-        addRoute(routes, day, coords);
-      };
-      req.send();
-
-    }
-
-
-    // -- --------------------------------------------------------------
-    // --  A D D   R O U T E 
-    // -- --------------------------------------------------------------
-    let colours = ['red', 'blue', 'green', 'magenta'];
-    function addRoute(routes, day, coords) {
-      // check if the route is already loaded
-
-      let id = `day${day}`;
-      let lineOpacity = 0.25;
-
-      if (map.getSource(id)) {
-        map.removeLayer(id)
-        map.removeSource(id)
-      } else {
-        map.addLayer({
-          "id": id,
-          "type": "line",
-          "source": {
-            "type": "geojson",
-            "data": {
-              "type": "Feature",
-              "properties": {
-                "title": `Day ${day}`,
-                "description": routes[day].logistics,
-                "summary": routes[day].summary,
-                "date": routes[day].date,
-              },
-              "geometry": coords
-            }
-          },
-          "layout": {
-            "line-join": "round",
-            "line-cap": "round"
-          },
-          "paint": {
-            "line-color": colours[day % (colours.length)],
-            "line-width": 6,
-            "line-opacity": lineOpacity
-          }
-        });
-      };
-
-
-      map.on("click", id, function (e) {
-        title.innerHTML = e.features[0].properties.date + " | " + e.features[0].properties.description;
-        description.innerHTML = e.features[0].properties.summary;
-
-        let coordinates = e.features[0].geometry.coordinates;
-
-        let bounds = coordinates.reduce(function (bounds, coord) {
-          return bounds.extend(coord);
-        }, new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]));
-
-        map.fitBounds(bounds, {
-          padding: 30,
-        });
-      });
-
-      // Change the cursor to a pointer when the mouse is over the places layer.
-      map.on("mouseenter", id, function (e) {
-        map.getCanvas().style.cursor = "pointer";
-        map.setPaintProperty(id, 'line-opacity', 1);
-        title.innerHTML = ""
-        if (e.features[0].properties.date != false) {
-          title.innerHTML = e.features[0].properties.date + " | ";
-        }
-        title.innerHTML += e.features[0].properties.description;
-        description.innerHTML = e.features[0].properties.summary;
-      });
-
-      // Change it back to a pointer when it leaves.
-      map.on("mouseleave", id, function (e) {
-        map.setPaintProperty(id, 'line-opacity', lineOpacity);
-        map.getCanvas().style.cursor = "";
-        // title.innerHTML = "";
-        // description.innerHTML = "";
-      });
-    }
-
-    function playback(items) {
-      let play = $(".fa-play, .fa-pause").attr("playing");
-
-      if (play == "true") {
-        let item = items[index];
-
-        title.innerHTML = item.properties.title;
-        description.innerHTML = item.properties.description;
-
-        let camera = {};
-        camera.center = [item.geometry.coordinates[0], item.geometry.coordinates[1],];
-        camera.zoom = 13;
-        camera.bearing = 0;
-        camera.pitch = 60;
-        camera.speed = 0.5;
-
-        map.flyTo(camera);
-
-        map.once("moveend", function () {
-          // Duration the slide is on screen after interaction
-          flight = window.setTimeout(function () {
-            // Increment index
-            index = index + 1 === items.length ? 0 : index + 1;
-            playback(items, index);
-          }, 3000); // After callback, show the location for 3 seconds.
-        });
-      } else {
-        clearTimeout(flight);
-        map.stop();
-        // map.instance.setView(
-        //   map.options.map.center,  map.options.map.zoom_initial
-        // );
-      }
-    }
-
-    function reset() {
-      index = 0;
-
-      map.stop();
-      clearTimeout(flight);
-
-      let camera = {};
-      camera.center = centre;
-      camera.zoom = zoom;
-      camera.bearing = 0;
-      camera.pitch = 0;
-      camera.speed = 0.5;
-
-      map.flyTo(camera);
-
-    }
 
     // enumerate ids of the layers
     var toggleableLayerIds = ['distillery'];
@@ -652,7 +582,6 @@
       var link = $("." + id);
 
       link.click(function (e) {
-        console.log('clicked...')
         e.preventDefault();
         e.stopPropagation();
 
@@ -666,6 +595,175 @@
           map.setLayoutProperty(id, 'visibility', 'visible');
         }
       });
+
+
+
+      // -- --------------------------------------------------------------
+      // --  D I R E C T I O N S
+      // -- --------------------------------------------------------------
+      function getDirections(routes, day) {
+
+        let e = routes[day].coords.join(';')
+
+        // https://www.mapbox.com/api-documentation/#directions
+        let url = `https://api.mapbox.com/directions/v5/mapbox/driving/${e}?geometries=geojson&steps=false&overview=full&access_token=${mapboxgl.accessToken}`;
+        let req = new XMLHttpRequest();
+        req.responseType = 'json';
+        req.open('GET', url, true);
+        req.onload = function () {
+          let jsonResponse = req.response;
+          let coords = jsonResponse.routes[0].geometry;
+          let km = jsonResponse.routes[0].distance * 0.001; // convert to km
+          let miles = km * 0.621371;
+          let seconds = jsonResponse.routes[0].duration;
+          let duration = moment.duration(seconds, 'seconds');
+
+          routes[day].distance = {}
+          routes[day].distance.miles = parseInt(miles, 10)
+          routes[day].distance.km = parseInt(km, 10)
+
+          routes[day].duration = duration._data.hours + "hrs " + duration._data.minutes + "m";
+          routes[day].logistics = routes[day].distance.miles + 'm | ' + routes[day].distance.km + 'km  |  ' + routes[day].duration;
+
+          // add the route to the map
+          addRoute(routes, day, coords);
+        };
+        req.send();
+
+      }
+
+
+      // -- --------------------------------------------------------------
+      // --  A D D   R O U T E 
+      // -- --------------------------------------------------------------
+      let colours = ['red', 'blue', 'green', 'magenta'];
+      function addRoute(routes, day, coords) {
+        // check if the route is already loaded
+
+        let id = `day${day}`;
+        let lineOpacity = 0.25;
+
+        if (map.getSource(id)) {
+          map.removeLayer(id)
+          map.removeSource(id)
+        } else {
+          map.addLayer({
+            "id": id,
+            "type": "line",
+            "source": {
+              "type": "geojson",
+              "data": {
+                "type": "Feature",
+                "properties": {
+                  "title": `Day ${day}`,
+                  "description": routes[day].logistics,
+                  "summary": routes[day].summary,
+                  "date": routes[day].date,
+                },
+                "geometry": coords
+              }
+            },
+            "layout": {
+              "line-join": "round",
+              "line-cap": "round"
+            },
+            "paint": {
+              "line-color": colours[day % (colours.length)],
+              "line-width": 6,
+              "line-opacity": lineOpacity
+            }
+          });
+        };
+
+
+        map.on("click", id, function (e) {
+          title.innerHTML = e.features[0].properties.date + " | " + e.features[0].properties.description;
+          description.innerHTML = e.features[0].properties.summary;
+
+          let coordinates = e.features[0].geometry.coordinates;
+
+          let bounds = coordinates.reduce(function (bounds, coord) {
+            return bounds.extend(coord);
+          }, new mapboxgl.LngLatBounds(coordinates[0], coordinates[0]));
+
+          map.fitBounds(bounds, {
+            padding: 30,
+          });
+        });
+
+        // Change the cursor to a pointer when the mouse is over the places layer.
+        map.on("mouseenter", id, function (e) {
+          map.getCanvas().style.cursor = "pointer";
+          map.setPaintProperty(id, 'line-opacity', 1);
+          title.innerHTML = ""
+          if (e.features[0].properties.date != false) {
+            title.innerHTML = e.features[0].properties.date + " | ";
+          }
+          title.innerHTML += e.features[0].properties.description;
+          description.innerHTML = e.features[0].properties.summary;
+        });
+
+        // Change it back to a pointer when it leaves.
+        map.on("mouseleave", id, function (e) {
+          map.setPaintProperty(id, 'line-opacity', lineOpacity);
+          map.getCanvas().style.cursor = "";
+          // title.innerHTML = "";
+          // description.innerHTML = "";
+        });
+      }
+
+      function playback(items) {
+        let play = $(".fa-play, .fa-pause").attr("playing");
+
+        if (play == "true") {
+          let item = items[index];
+
+          title.innerHTML = item.properties.title;
+          description.innerHTML = item.properties.description;
+
+          let camera = {};
+          camera.center = [item.geometry.coordinates[0], item.geometry.coordinates[1],];
+          camera.zoom = 13;
+          camera.bearing = 0;
+          camera.pitch = 60;
+          camera.speed = 0.5;
+
+          map.flyTo(camera);
+
+          map.once("moveend", function () {
+            // Duration the slide is on screen after interaction
+            flight = window.setTimeout(function () {
+              // Increment index
+              index = index + 1 === items.length ? 0 : index + 1;
+              playback(items, index);
+            }, 3000); // After callback, show the location for 3 seconds.
+          });
+        } else {
+          clearTimeout(flight);
+          map.stop();
+          // map.instance.setView(
+          //   map.options.map.center,  map.options.map.zoom_initial
+          // );
+        }
+      }
+
+      function reset() {
+        index = 0;
+
+        map.stop();
+        clearTimeout(flight);
+
+        let camera = {};
+        camera.center = centre;
+        camera.zoom = zoom;
+        camera.bearing = 0;
+        camera.pitch = 0;
+        camera.speed = 0.5;
+
+        map.flyTo(camera);
+
+      }
+
 
       // -- -------------------
       // -- M E T   O F F I C E 
