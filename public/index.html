@@ -408,7 +408,7 @@
       $.get(`https://unruffled-pasteur-6641e3.netlify.app/api/mo`, function (data) {
 
         let warnings = [];
-        moWarningsSummary = `<ul>`;
+        moWarningsSummary = `<ul style="list-style-type: none; padding: 0; margin-left: 0;">`;
 
         $.each(data.warnings, function (i, c) {
           try {
