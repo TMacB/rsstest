@@ -414,7 +414,8 @@
           try {
 
             let title = c.title.replace(/[^ ]+ warning of (.+)$/, "$1")
-            moWarningsSummary = moWarningsSummary + `<li><img src="img/${c.level}Warning.svg" style="height: 14px"/>${moment(c.start).format('ddd DD MMM hh:mm')} -> ${moment(c.end).format('ddd DD MMM hh:mm')} <a href="${c.url}">${title}</a></li>`;
+            // moWarningsSummary = moWarningsSummary + `<li><img src="img/${c.level}Warning.svg" style="height: 14px"/>${moment(c.start).format('ddd DD MMM hh:mm')} -> ${moment(c.end).format('ddd DD MMM hh:mm')} <a href="${c.url}">${title}</a></li>`;
+            moWarningsSummary = moWarningsSummary + `<li><img src="img/${c.level}Warning.svg" style="height: 14px"/> ${moment(c.start).format('ddd DD')} -> ${moment(c.end).format('ddd DD')} <a href="${c.url}">${title}</a></li>`;
 
             // let latlon = c.point.split(" ");
 
@@ -636,9 +637,10 @@
       // -- --------------------------------------------------------------
       // --  A D D   R O U T E 
       // -- --------------------------------------------------------------
-      let colours = ['red', 'blue', 'green', 'magenta'];
       function addRoute(routes, day, coords) {
         // check if the route is already loaded
+
+        let colours = ['red', 'blue', 'green', 'magenta'];
 
         let id = `day${day}`;
         let lineOpacity = 0.25;

@@ -113,7 +113,7 @@ body {
     margin: 0 0 10px;
 }
 
-.map-overlay-container >> ul {
+ul {
     list-style-position: inside; 
     padding-left: 5px;
 }
